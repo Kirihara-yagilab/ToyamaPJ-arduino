@@ -1,76 +1,76 @@
 // 20/12/07 ver 2.10 Kirihara
 // 20/12/16 ver 2.20 Kirihara
 // 20/12/23 ver 2.30 Kirihara
-// 21/03/02 ver 2.35 Kirihara PID§Œä CalcImput()“àKp Ki Kd ‚ğ20ŒŠƒvƒŒ[ƒg—p‚É¬‚³‚­‚µ‚Ü‚µ‚½D•‰’S‚ğ‰º‚°‚Ü‚·D
-//                            Ki‚ª“ü‚Á‚Ä‚¢‚é‚Ì‚Å~‚Ü‚Á‚Ä‚à‚µ‚Î‚ç‚­‚·‚ê‚Î“dˆ³ã‚ª‚Á‚Ä“®‚­‚Æv‚¢‚Ü‚·‚ª‹C”z‚ª‚È‚¢ê‡˜A—‚­‚¾‚³‚¢D
-//                            “dˆ³‚Ì•Ï‰»‚ÌƒI[ƒo[ƒVƒ…[ƒg‚ª‘å‚«‚¢ê‡‚ÍKd‚ğŒ¸‚ç‚µ‚Ä‚­‚¾‚³‚¢D“r’†‚Å~‚Ü‚éê‡‚ÍKi‚ğã‚°‚Ä‚­‚¾‚³‚¢D
-//                            10ŒŠƒvƒŒ[ƒg‚È‚çKp=0.02f@Ki=0.1f Kd=0.02f ˆÊ‚ª‚¿‚å‚¤‚Ç‚¢‚¢‚Å‚·D
-// 21/10/** ver 3.00 Kirihara ŠÔ•Ï‰»ŠÖ”‚ğ•ÏX
+// 21/03/02 ver 2.35 Kirihara PIDåˆ¶å¾¡ CalcImput()å†…Kp Ki Kd ã‚’20ç©´ãƒ—ãƒ¬ãƒ¼ãƒˆç”¨ã«å°ã•ãã—ã¾ã—ãŸï¼è² æ‹…ã‚’ä¸‹ã’ã¾ã™ï¼
+//                            KiãŒå…¥ã£ã¦ã„ã‚‹ã®ã§æ­¢ã¾ã£ã¦ã‚‚ã—ã°ã‚‰ãã™ã‚Œã°é›»åœ§ä¸ŠãŒã£ã¦å‹•ãã¨æ€ã„ã¾ã™ãŒæ°—é…ãŒãªã„å ´åˆé€£çµ¡ãã ã•ã„ï¼
+//                            é›»åœ§ã®å¤‰åŒ–ã®ã‚ªãƒ¼ãƒãƒ¼ã‚·ãƒ¥ãƒ¼ãƒˆãŒå¤§ãã„å ´åˆã¯Kdã‚’æ¸›ã‚‰ã—ã¦ãã ã•ã„ï¼é€”ä¸­ã§æ­¢ã¾ã‚‹å ´åˆã¯Kiã‚’ä¸Šã’ã¦ãã ã•ã„ï¼
+//                            10ç©´ãƒ—ãƒ¬ãƒ¼ãƒˆãªã‚‰Kp=0.02fã€€Ki=0.1f Kd=0.02f ä½ãŒã¡ã‚‡ã†ã©ã„ã„ã§ã™ï¼
+// 21/10/** ver 3.00 Kirihara æ™‚é–“å¤‰åŒ–é–¢æ•°ã‚’å¤‰æ›´
 #include "DualTB9051FTGMotorShield.h"
 
 DualTB9051FTGMotorShield md;
 const int LED = 4;
-const float RPM_switch[4] = { 0.0f,30.0f,60.0f,240.0f }; //20ŒŠ‚Ìê‡ 30rpm‚Å5Hz 60rpm‚Å10Hz 240rpm‚Å40Hz
-const float timer_limit = 86400.0f; //86400•b=1“ú‚Å’â~DŒ»İ“ü—Í‚ÍuImputV*ImputMulti()+ImputAdd()v@ImputMulti‚Ì’†g‚Í1-0.5*H((Œ»İ)-timer_limit), ImputAdd‚Ì’†g‚Í0‚É‚µ‚Ä‚ ‚è‚Ü‚·D
+const float RPM_switch[4] = { 0.0f,30.0f,60.0f,240.0f }; //20ç©´ã®å ´åˆ 30rpmã§5Hz 60rpmã§10Hz 240rpmã§40Hz
+const float timer_limit = 86400.0f; //86400ç§’=1æ—¥ã§åœæ­¢ï¼ç¾åœ¨å…¥åŠ›ã¯ã€ŒImputV*ImputMulti()+ImputAdd()ã€ã€€ImputMultiã®ä¸­èº«ã¯1-0.5*H((ç¾åœ¨æ™‚åˆ»)-timer_limit), ImputAddã®ä¸­èº«ã¯0ã«ã—ã¦ã‚ã‚Šã¾ã™ï¼
 const float GeerRatio = 20.4f;
 
 float timer_start2, timer_delta2;
 
-//===============ŠÔŠÇ——p•Ï” ProgramedRPM(millis())=================
-const int mode = 1; //0‚ÅƒXƒCƒbƒ`ƒRƒ“ƒgƒ[ƒ‰®@1‚Å‚ ‚ç‚©‚¶‚ßƒvƒƒOƒ‰ƒ€‚µ‚½ŠÔ•Ï‰»‚Åi‚Ş
-const float time_schedule[4] = { 1.0/60.0f,2.0f/60.0f,0.5/60.0f,0.5/60.0f }; //‰ñ“]”‚ğ•ÏX‚³‚¹‚éŠÔ(ŠJn‚©‚ç‚Ì—İŒvŠÔ‚Å‚Í‚È‚­CŠe‹æŠÔ‚Ì’·‚³:h)
-const float RPM_schedule[4] = { 30.0f,-1.0f,60.0f,240.0f }; //‰ñ“]”, time_schedule‚Æ‘Î‰C-1.0‚ÅüŒ`•Ï‰»
+//===============æ™‚é–“ç®¡ç†ç”¨å¤‰æ•° ProgramedRPM(millis())=================
+const int mode = 0; //0ã§ã‚¹ã‚¤ãƒƒãƒã‚³ãƒ³ãƒˆãƒ­ãƒ¼ãƒ©å¼ã€€1ã§ã‚ã‚‰ã‹ã˜ã‚ãƒ—ãƒ­ã‚°ãƒ©ãƒ ã—ãŸæ™‚é–“å¤‰åŒ–ã§é€²ã‚€
+const float time_schedule[4] = { 1.0/60.0f,2.0f/60.0f,0.5/60.0f,0.5/60.0f }; //å›è»¢æ•°ã‚’å¤‰æ›´ã•ã›ã‚‹æ™‚é–“(é–‹å§‹ã‹ã‚‰ã®ç´¯è¨ˆæ™‚é–“ã§ã¯ãªãï¼Œå„åŒºé–“ã®é•·ã•:h)
+const float RPM_schedule[4] = { 30.0f,-1.0f,60.0f,240.0f }; //å›è»¢æ•°, time_scheduleã¨å¯¾å¿œï¼Œ-1.0ã§ç·šå½¢å¤‰åŒ–
 int length=(int)sizeof(RPM_schedule) / sizeof(float);
 float time_length;
 
-//===============ƒXƒCƒbƒ`“Ç‚İæ‚è•Ï” ReadSwitch()======================
-//ƒXƒCƒbƒ`“Ç‚İæ‚èƒsƒ“;
-float targ_rpm, targ_rpm_bf = 0; //•Ï”‰Šú‰»;
-int n = 0; //“¯‚¶‚­;
-const int analogPin = 3; //3”Ôƒsƒ“‚Å“Ç‚İæ‚è;
+//===============ã‚¹ã‚¤ãƒƒãƒèª­ã¿å–ã‚Šå¤‰æ•° ReadSwitch()======================
+//ã‚¹ã‚¤ãƒƒãƒèª­ã¿å–ã‚Šãƒ”ãƒ³;
+float targ_rpm, targ_rpm_bf = 0; //å¤‰æ•°åˆæœŸåŒ–;
+int n = 0; //åŒã˜ã;
+const int analogPin = 3; //3ç•ªãƒ”ãƒ³ã§èª­ã¿å–ã‚Š;
 
-//==============ƒ‚[ƒ^[ƒpƒ‹ƒX“Ç‚İæ‚è Countencorder()==================
+//==============ãƒ¢ãƒ¼ã‚¿ãƒ¼ãƒ‘ãƒ«ã‚¹èª­ã¿å–ã‚Š Countencorder()==================
 //Green=encGND Blue=encVcc
 
 //Yellow=encOUT1
 const int outputA = 3;
 //White=encOUT2
 const int outputB = 5;
-//ƒGƒ“ƒR[ƒ_[M†
+//ã‚¨ãƒ³ã‚³ãƒ¼ãƒ€ãƒ¼ä¿¡å·
 int aState, aLastState;
 
-//================ƒ‚[ƒ^[ƒpƒ‹ƒX“Ç‚İæ‚è CalcRPM()=======================
-//ˆê‰ñ“]ƒpƒ‹ƒX”
+//================ãƒ¢ãƒ¼ã‚¿ãƒ¼ãƒ‘ãƒ«ã‚¹èª­ã¿å–ã‚Š CalcRPM()=======================
+//ä¸€å›è»¢ãƒ‘ãƒ«ã‚¹æ•°
 const float OneRotate = 12.0f;
-//ŠÔŒv‘ª—pŠÖ”
+//æ™‚é–“è¨ˆæ¸¬ç”¨é–¢æ•°
 float timer_start1, timer_delta1;
-//ƒGƒ“ƒR[ƒ_[ƒJƒEƒ“ƒg
+//ã‚¨ãƒ³ã‚³ãƒ¼ãƒ€ãƒ¼ã‚«ã‚¦ãƒ³ãƒˆ
 int counter = 0;
 
-//================PID§Œä CalcImput()=================================
-//“ü—ÍM†
+//================PIDåˆ¶å¾¡ CalcImput()=================================
+//å…¥åŠ›ä¿¡å·
 float ImputV, ImputV_bf = 0;
 
-//PID‚Ì•Ï”C’l‚ª‘å‚«‚¢‚Ù‚Ç•Ï‰»—Ê‚ª‘å‚«‚­‚È‚é
-const float Kp = 0.006f;
-const float Ki = 0.03f;
-const float Kd = 0.006f;
+//PIDã®å¤‰æ•°ï¼Œå€¤ãŒå¤§ãã„ã»ã©å¤‰åŒ–é‡ãŒå¤§ãããªã‚‹
+const float Kp = 0.02f;
+const float Ki = 0.1f;
+const float Kd = 0.02f;
 float ImputVmax = 400;
 float DeltaRpmBf = 0, DeltaRpmAf = 0;
 float Integral;
 
 
-//‰ñ“]‹L˜^—p
+//å›è»¢è¨˜éŒ²ç”¨
 float rpm = 0, TempRpm = 0;
 
-//ƒ[ƒ^ƒŠ[ƒXƒCƒbƒ`‚ğ“Ç‚İ‚ñ‚Å–Ú•Wrpm‚ğ•Ô‚·;
+//ãƒ­ãƒ¼ã‚¿ãƒªãƒ¼ã‚¹ã‚¤ãƒƒãƒã‚’èª­ã¿è¾¼ã‚“ã§ç›®æ¨™rpmã‚’è¿”ã™;
 void setup()
 {
     Serial.begin(9600);
     Serial.print("\n");
     if (mode == 1) {
         if ((int)sizeof(RPM_schedule) / sizeof(float) != (int)sizeof(time_schedule) / sizeof(float)) {
-            Serial.println("İ’è‚ÌŠÔ‚Æ‰ñ“]”‚Ì’·‚³‚ªˆê’v‚µ‚Ü‚¹‚ñ");
+            Serial.println("è¨­å®šã®æ™‚é–“ã¨å›è»¢æ•°ã®é•·ã•ãŒä¸€è‡´ã—ã¾ã›ã‚“");
         }
         Serial.print(Display_schedule());
 
@@ -81,19 +81,19 @@ void setup()
     
     //Serial.println("test finish");
 
-    //ƒ‚[ƒ^[ƒhƒ‰ƒCƒo€”õ
+    //ãƒ¢ãƒ¼ã‚¿ãƒ¼ãƒ‰ãƒ©ã‚¤ãƒæº–å‚™
     md.init();
     md.enableDrivers();
     delay(1);
 
-    //ƒGƒ“ƒR[ƒ_[€”õ
+    //ã‚¨ãƒ³ã‚³ãƒ¼ãƒ€ãƒ¼æº–å‚™
     pinMode(outputA, INPUT);
     pinMode(outputB, INPUT);
     aLastState = digitalRead(outputA);
     timer_start1 = millis();
     timer_start2 = millis();
 
-    //ƒXƒCƒbƒ`€”õ
+    //ã‚¹ã‚¤ãƒƒãƒæº–å‚™
     targ_rpm = 0;
 }
 
@@ -105,7 +105,7 @@ void loop()
     Countencorder();
     timer_delta1 = millis() - timer_start1;
     timer_delta2 = millis() - timer_start2;
-    //0.3•b‚²‚Æ‚Éƒ‚[ƒ^[XV
+    //0.3ç§’ã”ã¨ã«ãƒ¢ãƒ¼ã‚¿ãƒ¼æ›´æ–°
     if (timer_delta1 > 300) {
         rpm = CalcRPM();
         if (mode == 0) {
@@ -117,7 +117,7 @@ void loop()
         timer_start1 = millis();
     }
     if (timer_delta2 > 1000) {
-        //ƒf[ƒ^•\¦ ŠÔ[s], –Ú•W‰ñ“]”[rpm],Œ»İ‚Ì‰ñ“]”[rpm],“ü—Í“dˆ³[V]‚Å\¬@1s‚²‚Æ‚ÉXV
+        //ãƒ‡ãƒ¼ã‚¿è¡¨ç¤º æ™‚é–“[s], ç›®æ¨™å›è»¢æ•°[rpm],ç¾åœ¨ã®å›è»¢æ•°[rpm],å…¥åŠ›é›»åœ§[V]ã§æ§‹æˆã€€1sã”ã¨ã«æ›´æ–°
         Serial.print(millis() / 1000.0f);
         Serial.print(",");
         //Serial.print("");
@@ -130,14 +130,6 @@ void loop()
         //Serial.print("ImputV:");
         if (targ_rpm == 0 && rpm == 0) {
             ImputV = 0;
-            if (time_length < millis() / (3600000.0f) ){
-                Serial.println("");
-                Serial.print("Programed schedule finished");
-                    while (true)
-                    {
-                        //I—¹Œã–³ŒÀƒ‹[ƒv
-                    }
-            }
         }
         Serial.println(ImputV / 400 * 12);
         timer_start2 = millis();
@@ -205,7 +197,7 @@ void stopIfFault() {
 float CalcRPM() {
     timer_delta1 = millis() - timer_start1;
     float TempRpm = 60.0f / timer_delta1 * 1000.0f * counter / (OneRotate * GeerRatio);
-    //Œv‘ª’l‚Ì‰Šú‰»
+    //è¨ˆæ¸¬å€¤ã®åˆæœŸåŒ–
     counter = 0;
     return TempRpm;
 }
@@ -248,7 +240,7 @@ float ImputAdd(float t) {
 }
 
 float Programed_rpm(float t) {
-    float time = t / (3600000); //Œo‰ßŠÔ[h]‚Ì“±o 60sec*60min*1000ms‚Å[ms]¨[h]‚É•ÏŠ·
+    float time = t / (3600000); //çµŒéæ™‚é–“[h]ã®å°å‡º 60sec*60min*1000msã§[ms]â†’[h]ã«å¤‰æ›
     float keika = 0;
     int phase = length;
     for (size_t i = 0; i < length; i++)
