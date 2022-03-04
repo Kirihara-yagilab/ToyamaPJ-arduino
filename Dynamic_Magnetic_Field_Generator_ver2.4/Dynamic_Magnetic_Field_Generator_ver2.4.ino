@@ -11,7 +11,9 @@
 DualTB9051FTGMotorShield md;
 int LED = 4;
 float SetRPM[4]={0.0f,30.0f,60.0f,240.0f}; //ギア比20.4の場合
-float timer_limit=86400.0f; //86400秒=1日で停止．現在入力は「ImputV*ImputMulti()+ImputAdd()」　ImputMultiの中身は1-0.5*H((現在時刻)-timer_limit), ImputAddの中身は0にしてあります．
+float timer_limit=3600.0f; 
+//3600秒で停止．現在入力は「ImputV*ImputMulti()+ImputAdd()」
+//ImputMultiの中身は1-H_{1/2}((現在時刻)-timer_limit), ImputAddの中身は0にしてあります．
 float GeerRatio = 20.4f;
 
 //===============スイッチ読み取り変数 ReadSwitch()======================
@@ -69,10 +71,10 @@ void setup()
   //Serial.println("Dual TB9051FTG Motor Shield");
   md.init();
   md.enableDrivers();
-  delay(1); // wait for drivers to be enabled so fault pins are no longer low
+  delay(1); 
   // Uncomment to flip a motor's direction:
-  //md.flipM1(true);
-  //md.flipM2(true);
+  md.flipM1(true);
+  md.flipM2(true);
 
   //エンコーダー準備
   pinMode(outputA, INPUT);
@@ -86,8 +88,6 @@ void setup()
 
 void loop()
 {
-  //md.enableDrivers();
-  //delay(1); // wait for drivers to be enabled so fault pins are no longer low
   md.setM1Speed(ImputV);
   Countencorder();
   timer_delta = millis() - timer_start;
@@ -106,61 +106,40 @@ void loop()
     Serial.print(",");
     ImputV = CalcPID();
     ImputV=ImputV*ImputMulti(millis())+ImputAdd(millis() / 1000.0f);
-    //Serial.print("ImputV:");
     if (targ_rpm == 0 && rpm == 0) {
       ImputV = 0;
     }
     Serial.println(ImputV / 400 * 12);
   }
-  //md.disableDrivers();
-  //delay(1);
 }
 
 float ReadSwitch() {
-  // put your main code here, to run repeatedly:
   float max_val = 1024.0f;
   float val = analogRead(analogPin);
-  //Serial.print( " : " );
   if (val < max_val * 0.25f) {
-    if (targ_rpm != SetRPM[0]) {
-      //Serial.print("Off\n");
-    }
     return SetRPM[0];
   }
   else if (max_val * 0.25f <= val && val < max_val * 0.5f) {
-    if (targ_rpm != SetRPM[1]) {
-      //Serial.print("Low\n");
-    }
     return SetRPM[1];
   }
   else if (max_val * 0.5f <= val && val < max_val * 0.75f) {
-    if (targ_rpm != SetRPM[2]) {
-      //Serial.print("Middle\n");
-    }
     return SetRPM[2];
   }
   else {
-    if (targ_rpm != SetRPM[3]) {
-      //Serial.print("High\n");
-    }
     return SetRPM[3];
   }
 }
 
 void Countencorder() {
-  aState = digitalRead(outputA); // Reads the "current" state of the outputA
-  // If the previous and the current state of the outputA are different, that means a Pulse has occured
+  aState = digitalRead(outputA); 
   if (aState != aLastState && aState != 0) {
-    // If the outputB state is different to the outputA state, that means the encoder is rotating clockwise
     if (digitalRead(outputB) != aState) {
     }
     else {
       counter++;
     }
-    //Serial.print("Position: ");
-    //Serial.println(counter);
   }
-  aLastState = aState; // Updates the previous state of the outputA with the current state
+  aLastState = aState;
 }
 
 void stopIfFault() {
@@ -195,13 +174,6 @@ float CalcPID() {
 
   i = Ki * Integral;
 
-  /*
-    if(targ_rpm==0){
-    if(rpm==0){
-      return 0;
-    }
-    }
-  */
   if (p + i + d > 0) {
     if (p + i + d < ImputVmax) {
       return p + i + d;
